@@ -48,37 +48,33 @@ jobs:
     - name: Checkout the repository
       uses: actions/checkout@v4
               
-    - name: Free disk space (1/3)
-      run: |
-       sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-       sudo docker image prune --all --force
-       sudo docker builder prune -a
-
-    - name: Free disk space (2/3)
-      uses: jlumbroso/free-disk-space@main
-      with:
-          tool-cache: true
-
-    - name: Free disk space (3/3)
+    - name: Free disk space (1/1)
       uses: rokibhasansagar/slimhub_actions@main
-      with:
-          retain: 'compiler_cmake'
 
-    - name: Swap Space
-      uses: pierotofy/set-swap-space@master
-      with:
-        swap-size-gb: 24
-      
-    - name: Set-up Build Environment
+    - name: Prepare the environment
       run: |
-        mkdir tmp
-        cd tmp
-        git clone https://github.com/akhilnarang/scripts
-        cd scripts
-        ./setup/android*.sh
-        cd ../..
-        rm -rf tmp
-      
+        sudo apt update && sudo apt upgrade -y
+        DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
+            linux-modules-extra-$(uname -r) \
+            gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib \
+            libc6-dev lib32ncurses-dev x11proto-core-dev libx11-dev tree lib32z-dev libgl1-mesa-dev libxml2-utils \
+            xsltproc bc ccache lib32readline-dev lib32z1-dev liblz4-tool libncurses-dev libsdl1.2-dev \
+            build-essential libgtk-3-dev libglu1-mesa-dev freeglut3-dev git libxml2 lzop pngcrush schedtool squashfs-tools \
+            imagemagick libbz2-dev lzma ncftp qemu-user-static libstdc++-10-dev libncurses6 python3 tar3
+
+    - name: Install OpenJDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '21'
+
+    - name: Install repo
+      run: |
+        mkdir ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        sudo ln -sf ~/bin/repo /usr/bin/repo
+
     - name: Setup Manifest and Sync TWRP
       if: inputs.MANIFEST_BRANCH == 'twrp-11' || inputs.MANIFEST_BRANCH == 'twrp-12.1'
       run: |
@@ -88,6 +84,11 @@ jobs:
         git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
         repo init --depth=1 -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b ${{ inputs.MANIFEST_BRANCH }}
         repo sync -j32
+
+    - name: Repo Sync
+      run: |
+        repo sync -j$(nproc --all) --force-sync
+      working-directory: ${GITHUB_WORKSPACE}/TWRP
         
     - name: Clone Device Tree
       run: |
@@ -107,7 +108,6 @@ jobs:
         
     - name: Set Release Properties
       run: |
-        # Set Build Date (fixed)
         echo "BUILD_DATE=$(TZ=Asia/Manila date +'%d %B %Y %H:%M')" >> $GITHUB_ENV
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
