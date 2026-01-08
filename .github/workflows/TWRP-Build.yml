@@ -121,6 +121,11 @@ jobs:
         export DEVICE_PATH=${{ inputs.DEVICE_PATH }}
         bash patch-maintainer.sh
 
+    - name: Apply kernel header patches if building on Mi439
+      if: ${{ inputs.KERNEL_TREE != '' }}
+      run: |
+        git apply fix-generated-kernel-headers.patch
+
     - name: Building TWRP
       run: |
         cd ${GITHUB_WORKSPACE}/TWRP
