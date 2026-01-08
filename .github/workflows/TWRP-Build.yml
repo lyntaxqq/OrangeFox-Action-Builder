@@ -19,6 +19,14 @@ on:
         description: 'Device Common Tree'
         required: false
         default: 'https://github.com/galaxy-a16/android_device_samsung_mt6835-common'
+      KERNEL_TREE:
+        description: 'Device Kernel Tree (NOT NEEDED IF YOU ARE NOT BUILDING MI439, YOU CAN LEAVE IT BLANK.)'
+        required: false
+        default: 'https://github.com/Mi-Thorium/android_device_xiaomi_kernel-mithorium'
+      KERNEL_PATH:
+        description: 'Device Kernel Tree Path (LEAVE IT BLANK IF YOU LEAVED KERNEL TREE BLANK TOO.)'
+        required: false
+        default: 'device/xiaomi/kernel-mithorium'
       COMMON_PATH:
         description: 'Device Common Tree Path'
         required: false
@@ -100,6 +108,12 @@ jobs:
         git clone ${{ inputs.COMMON_TREE }} ./${{ inputs.COMMON_PATH }}
         cd ${{ inputs.COMMON_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+    - name: Clone Kernel Tree
+      if: ${{ inputs.KERNEL_TREE != '' }}
+      run: |
+        cd ${GITHUB_WORKSPACE}/TWRP
+        git clone ${{ inputs.KERNEL_TREE }} ./${{ inputs.KERNEL_PATH }}
 
     - name: Apply patches
       run: |
