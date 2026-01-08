@@ -15,6 +15,14 @@ on:
         description: 'TWRP Device Tree'
         required: true
         default: 'https://github.com/galaxy-a16/android_device_samsung_a16'
+      COMMON_TREE:
+        description: 'Device Common Tree'
+        required: false
+        default: 'https://github.com/galaxy-a16/android_device_samsung_mt6835-common'
+      COMMON_PATH:
+        description: 'Device Common Tree Path'
+        required: false
+        default: 'device/samsung/mt6835-common'
       DEVICE_TREE_BRANCH:
         description: 'TWRP Device Tree Branch'
         required: true
@@ -35,6 +43,7 @@ on:
         options:
         - boot
         - recovery
+        - vendorboot
 
 jobs:
   build:
@@ -84,6 +93,19 @@ jobs:
         git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
         cd ${{ inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+    - name: Clone Common Tree
+      run: |
+        cd ${GITHUB_WORKSPACE}/TWRP
+        git clone ${{ inputs.COMMON_TREE }} ./${{ inputs.COMMON_PATH }}
+        cd ${{ inputs.COMMON_PATH }}
+        echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+    - name: Apply patches
+      run: |
+        export MANIFEST_BRANCH=${{ inputs.MANIFEST_BRANCH }}
+        export DEVICE_PATH=${{ inputs.DEVICE_PATH }}
+        bash patch-maintainer.sh
 
     - name: Building TWRP
       run: |
